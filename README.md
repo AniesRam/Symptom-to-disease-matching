@@ -49,3 +49,5 @@ The system prototype underwent structured usability evaluation:
 ├── app.py               # Main Flask application and route controllers
 ├── disease_model.pkl    # Serialized Random Forest model weights
 └── symptom_columns.pkl  # Encoded feature mapping schema
+
+add note: i also use PostgreSQL for this. because the database auto update so its easy for me :)
