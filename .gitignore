@@ -1,0 +1,14 @@
+# Exclude environment & cache folders
+venv/
+__pycache__/
+.ipynb_checkpoints/
+.vscode/
+
+# Exclude sensitive & temporary files
+.env
+cookies.txt
+*.zip
+test_queue.py
+
+# Exclude compiled python files
+*.pyc

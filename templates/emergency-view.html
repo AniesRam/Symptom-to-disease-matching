@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hospital - Emergency Alerts</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .header-gradient { background: linear-gradient(to right, #2563eb, #1e40af); }
+        .card-border { border: 1px solid #e5e7eb; }
+        button:hover { background-color: #e5e7eb; transform: scale(1.05); transition: all 0.2s ease; }
+        .urgent { background-color: #fee2e2; border-left: 4px solid #ef4444; }
+        .moderate { background-color: #fef3c7; border-left: 4px solid #f59e0b; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    {% include 'header.html' %}
+    <div class="container mx-auto px-4 py-6">
+        <div class="flex gap-6">
+            {% include 'sidebar.html' %}
+            <main class="flex-1">
+                {% if user.role == 'doctor' %}
+                    <!-- Doctor View: Review AI predictions and manually trigger alerts -->
+                    <div class="bg-white p-6 rounded-lg shadow-lg card-border">
+                        <h2 class="text-2xl font-bold mb-4 flex items-center gap-2">🚨 AI Prediction Review & Emergency Escalation</h2>
+                        <p class="text-gray-600 mb-6">
+                            Review recent AI predictions from patient symptom submissions. For high-risk cases (e.g., suspected tuberculosis or severe respiratory conditions), 
+                            manually initiate an alert. This ensures human oversight and ethical compliance.
+                        </p>
+                        <div id="predictions-list" class="space-y-4">
+                            <!-- Populate with real AI predictions from DB (e.g., AI_Prediction.query.join(Symptom_Entry).filter(...).all()) -->
+                            <p class="text-gray-500">No recent predictions to review.</p>
+                        </div>
+                        <div id="alert-confirmation" class="mt-4 hidden">
+                            <p class="text-red-600 font-semibold">Alert triggered for <span id="alert-patient"></span> with suspected <span id="alert-condition"></span>. Recorded in database.</p>
+                        </div>
+                    </div>
+                {% elif user.role == 'admin' %}
+                    <!-- Admin View: Manage alerts, route, notify, log outcomes -->
+                    <div class="bg-white p-6 rounded-lg shadow-lg card-border">
+                        <h2 class="text-2xl font-bold mb-4 flex items-center gap-2">🚨 Emergency Master Panel</h2>
+                        <p class="text-gray-600 mb-6">
+                            View active alerts escalated by clinicians. Route to staff, send notifications, and log outcomes for auditability.
+                        </p>
+                        <div id="active-alerts" class="space-y-4">
+                            {% for alert in active_alerts %}
+                                <div class="urgent p-4 rounded-lg">
+                                    <h4 class="font-semibold text-red-800">Alert #{{ alert.alert_id }}</h4>
+                                    <p class="text-gray-700"><strong>Patient:</strong> {{ alert.patient_name }}</p>
+                                    <p class="text-gray-700"><strong>Description:</strong> {{ alert.description }}</p>
+                                    <p class="text-sm text-gray-500">Triggered at: {{ alert.triggered_at }}</p>
+                                    <div class="mt-2 space-x-2">
+                                        <button class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">Route to Doctor</button>
+                                        <button class="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600">Send SMS/Email</button>
+                                        <form action="{{ url_for('resolve_alert', alert_id=alert.alert_id) }}" method="POST" style="display:inline;">
+                                            <button type="submit" class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600" onclick="return confirm('Resolve this alert?')">Resolve</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            {% else %}
+                                <p class="text-gray-500">No active alerts.</p>
+                            {% endfor %}
+                        </div>
+                        <div class="mt-6">
+                            <h3 class="text-lg font-semibold mb-2">Response Logs (Audit Trail)</h3>
+                            <table class="w-full table-auto border-collapse border border-gray-300">
+                                <thead>
+                                    <tr class="bg-gray-100">
+                                        <th class="border border-gray-300 px-4 py-2">Timestamp</th>
+                                        <th class="border border-gray-300 px-4 py-2">Patient</th>
+                                        <th class="border border-gray-300 px-4 py-2">Condition</th>
+                                        <th class="border border-gray-300 px-4 py-2">Triggered By</th>
+                                        <th class="border border-gray-300 px-4 py-2">Response Time</th>
+                                        <th class="border border-gray-300 px-4 py-2">Outcome</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="logs-table-body">
+                                    <!-- Populate with real logs from DB (e.g., Emergency_Alert.query.order_by(timestamp.desc()).all()) -->
+                                    <tr>
+                                        <td colspan="6" class="border border-gray-300 px-4 py-2 text-gray-500">No logs available.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                {% endif %}
+            </main>
+        </div>
+    </div>
+    {% include 'scripts.html' %}
+
+    <!-- JavaScript for Emergency Logic -->
+    <script>
+        // Doctor: Trigger alert on review (integrate with backend POST to /trigger_alert)
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('trigger-alert-btn')) {
+                const patient = e.target.getAttribute('data-patient');
+                const condition = e.target.getAttribute('data-condition');
+                // In real app: Send AJAX POST to /trigger_alert with data
+                alert(`Alert triggered for ${patient} with suspected ${condition}. Recorded in database.`);
+                document.getElementById('alert-patient').textContent = patient;
+                document.getElementById('alert-condition').textContent = condition;
+                document.getElementById('alert-confirmation').classList.remove('hidden');
+            }
+        });
+
+        // Admin actions (integrate with backend)
+        document.addEventListener('click', function(e) {
+            const action = e.target.textContent;
+            if (action === 'Route to Doctor') {
+                alert('Routed to doctor.');
+            } else if (action === 'Send SMS/Email') {
+                alert('Notification sent.');
+            } else if (action === 'Log Outcome') {
+                alert('Outcome logged.');
+            }
+        });
+    </script>
+</body>
+</html>

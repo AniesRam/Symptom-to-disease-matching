@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pusat Rawatan Warga - Book Appointment</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .header-gradient { background: linear-gradient(to right, #2563eb, #1e40af); }
+        .card-border { border: 1px solid #e5e7eb; }
+        button:hover { background-color: #e5e7eb; transform: scale(1.05); transition: all 0.2s ease; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    {% include 'header.html' %}
+    <div class="container mx-auto px-4 py-6">
+        <div class="flex gap-6">
+            {% include 'sidebar.html' %}
+            <main class="flex-1">
+                {% if user.role == 'patient' %}
+                    <div class="bg-white p-6 rounded-lg shadow-lg card-border">
+                        <h2 class="text-2xl font-bold mb-4"> Book Appointment</h2>
+                        {% if suggested_time %}
+                            <p class="text-green-600 mb-4">Suggested soonest time: <strong>{{ suggested_time }}</strong></p>
+                        {% endif %}
+                        <form action="/book-appointment" method="POST" class="space-y-4">
+                            <div>
+                                <label for="type" class="block text-gray-700 font-medium">Appointment Type</label>
+                                <select id="type" name="type" required class="w-full px-3 py-2 border rounded-lg">
+                                    <option value="regular">Regular Check-up</option>
+                                    <option value="follow-up">Follow-up</option>
+                                    <option value="symptom-based">Symptom-Based</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="date" class="block text-gray-700 font-medium">Date</label>
+                                <input type="date" id="date" name="date" value="{{ selected_date }}" required class="w-full px-3 py-2 border rounded-lg" onchange="updateAvailability()">
+                            </div>
+                            <div>
+                                <label for="time" class="block text-gray-700 font-medium">Time</label>
+                                <input type="time" id="time" name="time" value="{{ suggested_time or '' }}" required class="w-full px-3 py-2 border rounded-lg">
+                            </div>
+                            <div>
+                                <label for="reason" class="block text-gray-700 font-medium">Reason</label>
+                                <textarea id="reason" name="reason" rows="3" class="w-full px-3 py-2 border rounded-lg" placeholder="{{ symptoms or 'Describe reason...' }}"></textarea>
+                            </div>
+                            <button type="submit" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Book Appointment</button>
+                        </form>
+                    </div>
+                {% else %}
+                    <p class="text-gray-600">Access denied. Patient role required.</p>
+                {% endif %}
+            </main>
+        </div>
+    </div>
+    {% include 'scripts.html' %}
+    <script>
+        function updateAvailability() {
+            const date = document.getElementById('date').value;
+            window.location.href = `/book-appointment?date=${date}&symptoms={{ symptoms }}`;
+        }
+    </script>
+</body>
+</html>

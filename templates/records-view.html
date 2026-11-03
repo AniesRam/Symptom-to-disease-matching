@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pusat Rawatan Warga - Medical Records</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .header-gradient { background: linear-gradient(to right, #2563eb, #1e40af); }
+        .card-border { border: 1px solid #e5e7eb; }
+        button:hover { background-color: #e5e7eb; transform: scale(1.05); transition: all 0.2s ease; }
+        .record-item { cursor: pointer; padding: 12px; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 8px; }
+        .record-item:hover { background-color: #f9fafb; }
+        .record-details { display: none; padding: 12px; background-color: #f3f4f6; border-radius: 8px; margin-top: 8px; }
+        .tab-button { padding: 10px 20px; border: none; background: #e5e7eb; cursor: pointer; }
+        .tab-button.active { background: #2563eb; color: white; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    {% include 'header.html' %}
+    <div class="container mx-auto px-4 py-6">
+        <div class="flex gap-6">
+            {% include 'sidebar.html' %}
+            <main class="flex-1">
+                {% if user.role == 'patient' %}
+                    <div class="bg-white p-6 rounded-lg shadow-lg card-border">
+                        <h2 class="text-2xl font-bold mb-4 flex items-center gap-2">📋 Medical Records</h2>
+                        <p class="text-gray-600 mb-6">View your complete medical history. You can enter symptoms but cannot modify historical records.</p>
+                        
+                        <!-- Enter Symptoms Button -->
+                        <div class="mb-4">
+                            <a href="/symptoms" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Enter Symptoms</a>
+                        </div>
+
+                        <!-- Search Bar -->
+                        <div class="mb-4">
+                            <input type="text" id="search-records" placeholder="Search records (e.g., Diabetes)" class="w-full border border-gray-300 rounded-md p-3 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+
+                        <!-- Tabs for Record Types -->
+                        <div class="mb-4">
+                            <button class="tab-button active" onclick="showTab('diagnoses')">Diagnoses</button>
+                            <button class="tab-button" onclick="showTab('prescriptions')">Prescriptions</button>
+                            <button class="tab-button" onclick="showTab('symptoms')">Symptoms & Findings</button>
+                            <button class="tab-button" onclick="showTab('lab-imaging')">Lab & Imaging</button>
+                            <button class="tab-button" onclick="showTab('treatments')">Treatment Plans</button>
+                        </div>
+
+                        <!-- Diagnoses Tab -->
+                        <div id="diagnoses" class="tab-content active">
+                            <h3 class="text-lg font-semibold mb-3">Past Diagnoses</h3>
+                            <div class="records-list">
+                                {% for prescription in prescriptions %}
+                                    <div class="record-item" onclick="toggleDetails(this)">
+                                        <strong>{{ prescription.diagnosis }}</strong> - Diagnosed: {{ prescription.issued_date }}
+                                        <div class="record-details">
+                                            <p><strong>Details:</strong> {{ prescription.diagnosis }}</p>
+                                            <p><strong>Doctor:</strong> {{ prescription.doctor_id }}</p>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                                {% if not prescriptions %}
+                                    <p class="text-gray-500">No diagnoses found.</p>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Prescriptions Tab -->
+                        <div id="prescriptions" class="tab-content">
+                            <h3 class="text-lg font-semibold mb-3">Prescriptions</h3>
+                            <div class="records-list">
+                                {% for prescription in prescriptions %}
+                                    <div class="record-item" onclick="toggleDetails(this)">
+                                        <strong>{{ prescription.medications }}</strong> - Prescribed: {{ prescription.issued_date }}
+                                        <div class="record-details">
+                                            <p><strong>Medications:</strong> {{ prescription.medications }}</p>
+                                            <p><strong>Diagnosis:</strong> {{ prescription.diagnosis }}</p>
+                                            <p><strong>Doctor:</strong> {{ prescription.doctor_id }}</p>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                                {% if not prescriptions %}
+                                    <p class="text-gray-500">No prescriptions found.</p>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Symptoms & Findings Tab -->
+                        <div id="symptoms" class="tab-content">
+                            <h3 class="text-lg font-semibold mb-3">Symptoms & Examination Findings</h3>
+                            <div class="records-list">
+                                {% for symptom_entry in symptom_entries %}
+                                    <div class="record-item" onclick="toggleDetails(this)">
+                                        <strong>{{ symptom_entry.symptoms }}</strong> - Recorded: {{ symptom_entry.submitted_date }}
+                                        <div class="record-details">
+                                            <p><strong>Symptoms:</strong> {{ symptom_entry.symptoms }}</p>
+                                            {% for ai_prediction in ai_predictions %}
+                                                {% if ai_prediction.symptom_id == symptom_entry.symptom_id %}
+                                                    <p><strong>AI Prediction:</strong> {{ ai_prediction.predicted_disease }} ({{ "%.2f"|format(ai_prediction.confidence_score * 100) }}% confidence)</p>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                                {% if not symptom_entries %}
+                                    <p class="text-gray-500">No symptoms records found.</p>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Lab & Imaging Tab -->
+                        <div id="lab-imaging" class="tab-content">
+                            <h3 class="text-lg font-semibold mb-3">Lab & Imaging Results</h3>
+                            <div class="records-list">
+                                {% for lab_result in lab_results %}
+                                    <div class="record-item" onclick="toggleDetails(this)">
+                                        <strong>{{ lab_result.test_type }}</strong> - Date: {{ lab_result.date }}
+                                        <div class="record-details">
+                                            <p><strong>Results:</strong> {{ lab_result.results }}</p>
+                                            <p><strong>Notes:</strong> {{ lab_result.notes }}</p>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                                {% if not lab_results %}
+                                    <p class="text-gray-500">No lab/imaging results found.</p>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Treatment Plans Tab -->
+                        <div id="treatments" class="tab-content">
+                            <h3 class="text-lg font-semibold mb-3">Treatment Plans</h3>
+                            <div class="records-list">
+                                {% for treatment in treatments %}
+                                    <div class="record-item" onclick="toggleDetails(this)">
+                                        <strong>{{ treatment.plan_name }}</strong> - Started: {{ treatment.start_date }}
+                                        <div class="record-details">
+                                            <p><strong>Plan:</strong> {{ treatment.details }}</p>
+                                            <p><strong>Follow-up:</strong> {{ treatment.follow_up }}</p>
+                                            <p><strong>Doctor:</strong> {{ treatment.doctor }}</p>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                                {% if not treatments %}
+                                    <p class="text-gray-500">No treatment plans found.</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                {% elif user.role in ['doctor', 'nurse'] %}
+                    <div class="bg-white p-6 rounded-lg shadow-lg card-border">
+                        <h3 class="text-lg font-semibold mb-4">👨‍⚕️ Patient Records Review</h3>
+                        <p class="text-gray-600 mb-6">Select a patient to review symptoms, confirm/override AI suggestions, document decisions, and resolve alerts.</p>
+                        
+                        <!-- Select Patient -->
+                        <div class="mb-4">
+                            <label for="patient-select" class="block text-gray-700 font-medium mb-2">Select Patient</label>
+                            <select id="patient-select" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">Choose a patient...</option>
+                                {% for patient in patients %}
+                                    <option value="{{ patient.user_id }}">{{ patient.name }} (ID: {{ patient.user_id }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <!-- Patient Records (Loaded Dynamically) -->
+                        <div id="patient-records" class="hidden">
+                            <h4 class="text-md font-semibold mb-2">Patient Records</h4>
+                            <!-- AI Prediction Review -->
+                            {% if ai_prediction %}
+                                <div class="mb-4 p-4 bg-yellow-50 border-l-4 border-yellow-500 rounded">
+                                    <p><strong>AI Prediction:</strong> {{ ai_prediction.predicted_disease }} ({{ "%.2f"|format(ai_prediction.confidence_score * 100) }}%)</p>
+                                    <div class="mt-2 flex gap-2">
+                                        <button id="confirm-ai" class="px-3 py-1 bg-green-600 text-white rounded">Confirm</button>
+                                        <button id="override-ai" class="px-3 py-1 bg-red-600 text-white rounded">Override</button>
+                                    </div>
+                                </div>
+                            {% endif %}
+                            
+                            <!-- Document Clinical Decision -->
+                            <form id="clinical-decision-form" class="mb-4 space-y-2">
+                                <label for="decision" class="block text-gray-700 font-medium">Document Clinical Decision</label>
+                                <textarea id="decision" name="decision" rows="3" class="w-full px-3 py-2 border rounded-lg" placeholder="Enter decision notes..."></textarea>
+                                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg">Save Decision</button>
+                            </form>
+                            
+                            <!-- Resolve Alerts -->
+                            {% if alerts %}
+                                <h5 class="text-md font-semibold mb-2">Active Alerts</h5>
+                                {% for alert in alerts %}
+                                    <div class="mb-2 p-3 bg-red-50 border-l-4 border-red-500 rounded">
+                                        <p><strong>Alert:</strong> {{ alert.condition }} - {{ alert.details }}</p>
+                                        <button class="resolve-alert-btn px-3 py-1 bg-green-600 text-white rounded" data-alert-id="{{ alert.id }}">Resolve</button>
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+                            
+                            <!-- Records Tabs (Similar to Patient View) -->
+                            <div class="mt-6">
+                                <button class="tab-button active" onclick="showTab('patient-diagnoses')">Diagnoses</button>
+                                <button class="tab-button" onclick="showTab('patient-prescriptions')">Prescriptions</button>
+                                <!-- Add other tabs as needed -->
+                            </div>
+                            <div id="patient-diagnoses" class="tab-content active">
+                                <!-- Populate with patient's diagnoses -->
+                                <p>Patient diagnoses would load here.</p>
+                            </div>
+                            <div id="patient-prescriptions" class="tab-content">
+                                <!-- Populate with patient's prescriptions -->
+                                <p>Patient prescriptions would load here.</p>
+                            </div>
+                        </div>
+                    </div>
+                {% elif user.role == 'admin' %}
+                    <div class="bg-white p-6 rounded-lg shadow-lg card-border">
+                        <h3 class="text-lg font-semibold mb-4">⚙️ Records Oversight (Non-Clinical)</h3>
+                        <p class="text-gray-600 mb-6">View records for system oversight. No clinical edits allowed—manage content or configuration instead.</p>
+                        
+                        <!-- Links to Management -->
+                        <div class="space-y-2">
+                            <a href="/knowledge-base" class="block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Manage Knowledge Module</a>
+                            <a href="/analytics" class="block px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">View Analytics</a>
+                            <a href="/manage-users" class="block px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">Manage Users (Non-Clinical)</a>
+                        </div>
+                        
+                        <!-- Read-Only Records Summary -->
+                        <div class="mt-6">
+                            <h4 class="text-md font-semibold mb-2">System Records Summary</h4>
+                            <p>Total Patients: {{ total_patients }}</p>
+                            <p>Total Records: {{ total_records }}</p>
+                            <!-- No edit capabilities -->
+                        </div>
+                    </div>
+                {% endif %}
+            </main>
+        </div>
+    </div>
+    {% include 'scripts.html' %}
+
+    <!-- JavaScript for Tabs, Search, and Details -->
+    <script>
+        function showTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.querySelectorAll('.tab-button').forEach(button => button.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        function toggleDetails(item) {
+            const details = item.querySelector('.record-details');
+            details.style.display = details.style.display === 'block' ? 'none' : 'block';
+        }
+
+        // Search functionality for patients
+        document.getElementById('search-records')?.addEventListener('input', function() {
+            const query = this.value.toLowerCase();
+            document.querySelectorAll('.record-item').forEach(item => {
+                item.style.display = item.textContent.toLowerCase().includes(query) ? 'block' : 'none';
+            });
+        });
+
+        // Doctor: Load patient records on select
+        document.getElementById('patient-select')?.addEventListener('change', function() {
+            const patientId = this.value;
+            if (patientId) {
+                // Fetch patient data via AJAX (e.g., POST to /load-patient-records)
+                fetch('/load-patient-records', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ patient_id: patientId })
+                }).then(response => response.json()).then(data => {
+                    // Populate #patient-records with data
+                    document.getElementById('patient-records').classList.remove('hidden');
+                    // Update AI prediction, alerts, etc.
+                });
+            }
+        });
+
+        // Confirm/Override AI
+        document.getElementById('confirm-ai')?.addEventListener('click', () => {
+            // POST to /confirm-ai with prediction_id
+            alert('AI prediction confirmed.');
+        });
+        document.getElementById('override-ai')?.addEventListener('click', () => {
+            // POST to /override-ai with new decision
+            alert('AI prediction overridden.');
+        });
+
+        // Save Clinical Decision
+        document.getElementById('clinical-decision-form')?.addEventListener('submit', function(e) {
+            e.preventDefault();
+            // POST to /save-clinical-decision
+            alert('Clinical decision saved.');
+        });
+
+        // Resolve Alerts
+        document.querySelectorAll('.resolve-alert-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const alertId = this.getAttribute('data-alert-id');
+                // POST to /resolve-alert
+                this.parentElement.remove();
+                alert('Alert resolved.');
+            });
+        });
+    </script>
+</body>
+</html>

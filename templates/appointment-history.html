@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pusat Rawatan Warga - Appointment History</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .header-gradient { background: linear-gradient(to right, #2563eb, #1e40af); }
+        .card-border { border: 1px solid #e5e7eb; }
+        button:hover { background-color: #e5e7eb; transform: scale(1.05); transition: all 0.2s ease; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    {% include 'header.html' %}
+    <div class="container mx-auto px-4 py-6">
+        <div class="flex gap-6">
+            {% include 'sidebar.html' %}
+            <main class="flex-1">
+                <div class="bg-white p-6 rounded-lg shadow-lg card-border">
+                    <h2 class="text-2xl font-bold mb-4">📋 Appointment History</h2>
+                    {% if message %}
+                        <p class="text-green-600 mb-4">{{ message }}</p>
+                    {% endif %}
+                    <table class="w-full table-auto border-collapse border border-gray-300">
+                        <thead>
+                            <tr class="bg-gray-100">
+                                <th class="border border-gray-300 px-4 py-2">Date</th>
+                                <th class="border border-gray-300 px-4 py-2">Time</th>
+                                {% if user.role in ['doctor', 'nurse'] %}
+                                    <th class="border border-gray-300 px-4 py-2">Patient</th>
+                                {% else %}
+                                    <th class="border border-gray-300 px-4 py-2">Doctor</th>
+                                {% endif %}
+                                <th class="border border-gray-300 px-4 py-2">Reason</th>
+                                <th class="border border-gray-300 px-4 py-2">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for appt in appointments %}
+                                <tr>
+                                    <td class="border border-gray-300 px-4 py-2">{{ appt.date }}</td>
+                                    <td class="border border-gray-300 px-4 py-2">{{ appt.time }}</td>
+                                    {% if user.role in ['doctor', 'nurse'] %}
+                                        <td class="border border-gray-300 px-4 py-2">{{ appt.related_name }}</td>
+                                    {% else %}
+                                        <td class="border border-gray-300 px-4 py-2">{{ appt.related_name }}</td>
+                                    {% endif %}
+                                    <td class="border border-gray-300 px-4 py-2">{{ appt.reason }}</td>
+                                    <td class="border border-gray-300 px-4 py-2">{{ appt.status }}</td>
+                                </tr>
+                            {% endfor %}
+                            {% if not appointments %}
+                                <tr>
+                                    <td colspan="5" class="border border-gray-300 px-4 py-2 text-center text-gray-500">No appointments found.</td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </main>
+        </div>
+    </div>
+    {% include 'scripts.html' %}
+</body>
+</html>

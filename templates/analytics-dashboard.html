@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pusat Rawatan Warga - Analytics Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .header-gradient { background: linear-gradient(to right, #2563eb, #1e40af); }
+        .card-border { border: 1px solid #e5e7eb; }
+        button:hover { background-color: #e5e7eb; transform: scale(1.05); transition: all 0.2s ease; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    {% include 'header.html' %}
+    <div class="container mx-auto px-4 py-6">
+        <div class="flex gap-6">
+            {% include 'sidebar.html' %}
+            <main class="flex-1">
+                <div class="bg-white p-6 rounded-lg shadow-lg card-border">
+                    <h2 class="text-2xl font-bold mb-4 flex items-center gap-2">Analytics Dashboard</h2>
+                    
+                    {% if user.role == 'admin' %}
+                        <!-- Admin View: Upload and View Full Analytics -->
+                        <p class="text-gray-600 mb-6">Upload Power BI analytics reports and view insights for data-driven decisions.</p>
+                        
+                        <!-- Manage Analytics Section -->
+                        <div class="mb-6">
+                            <h3 class="text-lg font-semibold mb-2">Manage Analytics</h3>
+                            <form action="/update-analytics-settings" method="post" enctype="multipart/form-data" class="space-y-4">
+                                <input type="url" name="embed_url" placeholder="Power BI Embed URL (from embed code, e.g., https://app.powerbi.com/reportEmbed?...)" class="w-full px-3 py-2 border rounded-lg">
+                                <p class="text-sm text-gray-500">Note: Use the embed URL from Power BI's "Publish to web" or embed code, not the share link.</p>
+                                <input type="file" name="uploaded_file" accept=".pbix,.pdf,.png,.jpg" class="w-full px-3 py-2 border rounded-lg">
+                                <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-lg">Upload/Update Analytics</button>
+                            </form>
+                        </div>
+                        
+                        <!-- Interactive Power BI Dashboard -->
+                        {% if embed_url or uploaded_file %}
+                            <div class="mb-6">
+                                <h3 class="text-lg font-semibold mb-2">Interactive Power BI Dashboard</h3>
+                                {% if embed_url %}
+                                    <iframe
+                                        src="{{ embed_url }}"
+                                        width="100%"
+                                        height="600"
+                                        frameborder="0"
+                                        allowFullScreen="true">
+                                    </iframe>
+                                    <p class="text-sm text-gray-500 mt-2">Embedded Power BI report. Interact with filters and charts.</p>
+                                {% elif uploaded_file %}
+                                    <div class="bg-gray-100 p-8 rounded-lg text-center">
+                                        <div class="mb-4">
+                                            <svg class="mx-auto h-16 w-16 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                            </svg>
+                                        </div>
+                                        <h4 class="text-lg font-medium text-gray-900 mb-2">Power BI Report Available</h4>
+                                        <p class="text-gray-600 mb-4">A Power BI analytics report has been uploaded for viewing.</p>
+                                        <a href="/static/analytics/{{ uploaded_file }}" target="_blank" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                            </svg>
+                                            Open Power BI Report ({{ uploaded_file }})
+                                        </a>
+                                        <p class="text-sm text-gray-500 mt-2">Click to download and open in Power BI Desktop</p>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                        
+                        <!-- Key Metrics Summary -->
+                        <div id="metrics-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <div class="bg-gray-50 p-4 rounded-lg">
+                                <h3 class="text-lg font-semibold mb-2">Symptom Checker Submissions</h3>
+                                <p id="symptom-submissions" class="text-sm text-gray-600">Loading...</p>
+                                <div class="h-32 bg-blue-100 rounded flex items-center justify-center text-gray-500">Chart Placeholder</div>
+                            </div>
+                            <div class="bg-gray-50 p-4 rounded-lg">
+                                <h3 class="text-lg font-semibold mb-2">Most Common Symptoms</h3>
+                                <p id="most-common-symptoms" class="text-sm text-gray-600">Loading...</p>
+                                <div class="h-32 bg-green-100 rounded flex items-center justify-center text-gray-500">Bar Chart Placeholder</div>
+                            </div>
+                            <div class="bg-gray-50 p-4 rounded-lg">
+                                <h3 class="text-lg font-semibold mb-2">Disease Distribution</h3>
+                                <p id="disease-distribution" class="text-sm text-gray-600">Loading...</p>
+                                <div class="h-32 bg-yellow-100 rounded flex items-center justify-center text-gray-500">Pie Chart Placeholder</div>
+                            </div>
+                            <div class="bg-gray-50 p-4 rounded-lg">
+                                <h3 class="text-lg font-semibold mb-2">Alerts Triggered</h3>
+                                <p id="alerts-triggered" class="text-sm text-gray-600">Loading...</p>
+                                <div class="h-32 bg-red-100 rounded flex items-center justify-center text-gray-500">Status Chart Placeholder</div>
+                            </div>
+                            <div class="bg-gray-50 p-4 rounded-lg">
+                                <h3 class="text-lg font-semibold mb-2">Today's Appointments</h3>
+                                <p id="appointments-today" class="text-sm text-gray-600">Loading...</p>
+                                <div class="h-32 bg-purple-100 rounded flex items-center justify-center text-gray-500">Appointments Chart</div>
+                            </div>
+                            <div class="bg-gray-50 p-4 rounded-lg">
+                                <h3 class="text-lg font-semibold mb-2">Active Users Today</h3>
+                                <p id="active-users-today" class="text-sm text-gray-600">Loading...</p>
+                                <div class="h-32 bg-indigo-100 rounded flex items-center justify-center text-gray-500">Users Chart</div>
+                            </div>
+                        </div>
+                        <p id="last-updated" class="text-xs text-gray-500 mt-4">Last updated: Loading...</p>
+                        
+                        <!-- Export/Reports -->
+                        <div class="mt-6">
+                            <button class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Export Report (PDF)</button>
+                            <button class="ml-4 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700">Generate Insights</button>
+                        </div>
+                    {% else %}
+                        <!-- Patient/Doctor View: View Only Analytics -->
+                        <p class="text-gray-600 mb-6">View general analytics to stay informed about trends and insights.</p>
+                        
+                        <!-- Embedded Power BI Report (if shared by admin) -->
+                        {% if embed_url %}
+                            <div class="mb-6">
+                                <h3 class="text-lg font-semibold mb-2">Interactive Analytics</h3>
+                                <iframe 
+                                    src="{{ embed_url }}" 
+                                    width="100%" 
+                                    height="600" 
+                                    frameborder="0" 
+                                    allowFullScreen="true">
+                                </iframe>
+                                <p class="text-sm text-gray-500 mt-2">View-only analytics dashboard.</p>
+                            </div>
+                        {% endif %}
+                        
+                        <!-- Key Metrics Summary (Read-Only) -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="bg-gray-50 p-4 rounded-lg">
+                                <h3 class="text-lg font-semibold mb-2">Symptom Checker Submissions</h3>
+                                <p class="text-sm text-gray-600">Daily: 120 | Weekly: 840</p>
+                                <div class="h-32 bg-blue-100 rounded flex items-center justify-center text-gray-500">Chart Placeholder</div>
+                            </div>
+                            <div class="bg-gray-50 p-4 rounded-lg">
+                                <h3 class="text-lg font-semibold mb-2">Most Common Symptoms</h3>
+                                <p class="text-sm text-gray-600">Fever (45%), Cough (30%), Fatigue (25%)</p>
+                                <div class="h-32 bg-green-100 rounded flex items-center justify-center text-gray-500">Bar Chart Placeholder</div>
+                            </div>
+                            <div class="bg-gray-50 p-4 rounded-lg">
+                                <h3 class="text-lg font-semibold mb-2">Disease Distribution</h3>
+                                <p class="text-sm text-gray-600">Common Cold (40%), Pneumonia (30%), Asthma (20%)</p>
+                                <div class="h-32 bg-yellow-100 rounded flex items-center justify-center text-gray-500">Pie Chart Placeholder</div>
+                            </div>
+                            <div class="bg-gray-50 p-4 rounded-lg">
+                                <h3 class="text-lg font-semibold mb-2">Alerts Triggered</h3>
+                                <p class="text-sm text-gray-600">Pending: 15 | Resolved: 50</p>
+                                <div class="h-32 bg-red-100 rounded flex items-center justify-center text-gray-500">Status Chart Placeholder</div>
+                            </div>
+                            <div class="bg-gray-50 p-4 rounded-lg">
+                                <h3 class="text-lg font-semibold mb-2">Most Viewed Articles/Posters</h3>
+                                <p class="text-sm text-gray-600">COVID-19 Poster (200 views), Flu Tips (150 views)</p>
+                                <div class="h-32 bg-purple-100 rounded flex items-center justify-center text-gray-500">Views Chart Placeholder</div>
+                            </div>
+                            <div class="bg-gray-50 p-4 rounded-lg">
+                                <h3 class="text-lg font-semibold mb-2">Recent Trends</h3>
+                                <p class="text-sm text-gray-600">Flu cases up 20% this week. Stay vigilant!</p>
+                                <div class="h-32 bg-indigo-100 rounded flex items-center justify-center text-gray-500">Trend Chart Placeholder</div>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </main>
+        </div>
+    </div>
+    {% include 'scripts.html' %}
+
+    <!-- JavaScript for Analytics -->
+    <script>
+        // Function to fetch and update metrics
+        async function fetchMetrics() {
+            try {
+                const response = await fetch('/analytics/metrics');
+                if (response.ok) {
+                    const data = await response.json();
+                    updateMetrics(data);
+                } else {
+                    console.error('Failed to fetch metrics');
+                }
+            } catch (error) {
+                console.error('Error fetching metrics:', error);
+            }
+        }
+
+        // Function to update the UI with fetched data
+        function updateMetrics(data) {
+            document.getElementById('symptom-submissions').textContent = `Daily: ${data.symptom_submissions.daily} | Weekly: ${data.symptom_submissions.weekly}`;
+            document.getElementById('most-common-symptoms').textContent = data.most_common_symptoms;
+            document.getElementById('disease-distribution').textContent = data.disease_distribution;
+            document.getElementById('alerts-triggered').textContent = `Pending: ${data.alerts.pending} | Resolved: ${data.alerts.resolved}`;
+            document.getElementById('appointments-today').textContent = data.appointments_today;
+            document.getElementById('active-users-today').textContent = data.active_users_today;
+            document.getElementById('last-updated').textContent = `Last updated: ${data.last_updated}`;
+        }
+
+
+
+        // Fetch metrics on page load and set interval for updates
+        document.addEventListener('DOMContentLoaded', function() {
+            fetchMetrics(); // Initial load
+            setInterval(fetchMetrics, 30000); // Update every 30 seconds
+        });
+    </script>
+</body>
+</html>

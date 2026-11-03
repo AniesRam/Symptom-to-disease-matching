@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pusat Rawatan Warga - Queue Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .header-gradient { background: linear-gradient(to right, #2563eb, #1e40af); }
+        .card-border { border: 1px solid #e5e7eb; }
+        button:hover { background-color: #e5e7eb; transform: scale(1.05); transition: all 0.2s ease; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    {% include 'header.html' %}
+    <div class="container mx-auto px-4 py-6">
+        <div class="flex gap-6">
+            {% include 'sidebar.html' %}
+            <main class="flex-1">
+                {% if user.role in ['doctor', 'nurse'] %}
+                    <div class="bg-white p-6 rounded-lg shadow-lg card-border">
+                        <h2 class="text-2xl font-bold mb-4">Queue</h2>
+                        {% with messages = get_flashed_messages(with_categories=true) %}
+                            {% if messages %}
+                                {% for category, message in messages %}
+                                    <div class="mb-4 p-3 rounded {{ 'bg-green-100 text-green-800' if category == 'success' else 'bg-red-100 text-red-800' }}">
+                                        {{ message }}
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+                        {% endwith %}
+                        <table class="w-full table-auto border-collapse border border-gray-300">
+                            <thead>
+                                <tr class="bg-gray-100">
+                                    <th class="border border-gray-300 px-4 py-2">Position</th>
+                                    <th class="border border-gray-300 px-4 py-2">Patient</th>
+                                    <th class="border border-gray-300 px-4 py-2">Estimated Wait</th>
+                                    <th class="border border-gray-300 px-4 py-2">Reason</th>
+                                    <th class="border border-gray-300 px-4 py-2">Status</th>
+                                    <th class="border border-gray-300 px-4 py-2">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in queue %}
+                                    <tr>
+                                        <td class="border border-gray-300 px-4 py-2">{{ item.position }}</td>
+                                        <td class="border border-gray-300 px-4 py-2">{{ item.patient }}</td>
+                                        <td class="border border-gray-300 px-4 py-2">{{ item.estimated_wait }}</td>
+                                        <td class="border border-gray-300 px-4 py-2">{{ item.reason }}</td>
+                                        <td class="border border-gray-300 px-4 py-2">
+                                            <span class="px-2 py-1 rounded text-xs font-semibold 
+                                                {% if item.status == 'approved' %}bg-green-100 text-green-800
+                                                {% elif item.status == 'pending' %}bg-yellow-100 text-yellow-800
+                                                {% else %}bg-red-100 text-red-800{% endif %}">
+                                                {{ item.status }}
+                                            </span>
+                                        </td>
+                                        <td class="border border-gray-300 px-4 py-2">
+                                            {% if item.status == 'pending' %}
+                                                <form action="{{ url_for('approve_appointment', appointment_id=item.appointment_id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Approve this appointment?')">
+                                                    <button type="submit" class="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700">Approve</button>
+                                                </form>
+                                                <form action="{{ url_for('reject_appointment', appointment_id=item.appointment_id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Reject this appointment?')">
+                                                    <button type="submit" class="px-3 py-1 bg-red-600 text-white rounded ml-2 hover:bg-red-700">Reject</button>
+                                                </form>
+                                            {% elif item.status == 'approved' %}
+                                                <form action="{{ url_for('start_consultation_page', appointment_id=item.appointment_id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Start consultation?')">
+                                                    <button type="submit" class="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">Start Consultation</button>
+                                                </form>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        {% if not queue %}
+                            <p class="text-gray-600 mt-4">No pending or approved appointments in your queue.</p>
+                        {% endif %}
+                    </div>
+                {% else %}
+                    <p class="text-gray-600">Access denied. Doctor/Nurse role required.</p>
+                {% endif %}
+            </main>
+        </div>
+    </div>
+    {% include 'scripts.html' %}
+</body>
+</html>

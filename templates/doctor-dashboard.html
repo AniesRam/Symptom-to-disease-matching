@@ -1,0 +1,46 @@
+<div id="doctor-dashboard" class="doctor-view">
+    <div class="space-y-6">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="bg-blue-50 p-6 rounded-lg card-border">
+                <div class="text-3xl mb-2"></div>
+                <h3 class="font-semibold">Today's Patients</h3>
+                <p class="text-3xl font-bold text-blue-600">{{ todays_patients }}</p>
+            </div>
+            <div class="bg-green-50 p-6 rounded-lg card-border">
+                <div class="text-3xl mb-2"></div>
+                <h3 class="font-semibold">In Queue</h3>
+                <p class="text-3xl font-bold text-green-600">{{ in_queue }}</p>
+            </div>
+            <div class="bg-orange-50 p-6 rounded-lg card-border">
+                <div class="text-3xl mb-2"></div>
+                <h3 class="font-semibold">Completed</h3>
+                <p class="text-3xl font-bold text-orange-600">{{ completed }}</p>
+            </div>
+            <div class="bg-purple-50 p-6 rounded-lg card-border">
+                <div class="text-3xl mb-2"></div>
+                <h3 class="font-semibold">Pending Reviews</h3>
+                <p class="text-3xl font-bold text-purple-600">{{ pending_reviews }}</p>
+            </div>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow-md card-border">
+            <h2 class="text-xl font-bold mb-4">Current Queue</h2>
+            {% for item in queue_data %}
+                <div class="border-l-4 border-green-500 pl-4 py-3 mb-3 bg-gray-50 rounded">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="font-bold">#{{ loop.index }} - {{ item.patient_name }}, {{ item.patient_age }}y</p>
+                            <p class="text-sm text-gray-600 mt-1">Chief Complaint: {{ item.chief_complaint }}</p>
+                            <p class="text-sm text-blue-600 mt-1 font-medium">AI Prediction: {{ item.ai_prediction }}</p>
+                        </div>
+                        <form action="{{ url_for('start_consultation_page', appointment_id=item.appointment_id) }}" method="POST" style="display:inline;">
+                            <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 text-sm">Start Consultation</button>
+                        </form>
+                    </div>
+                </div>
+            {% endfor %}
+            {% if not queue_data %}
+                <p class="text-gray-600">No patients in queue.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>

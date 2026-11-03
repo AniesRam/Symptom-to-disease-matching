@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pusat Rawatan Warga UMS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .header-gradient { background: linear-gradient(to right, #2563eb, #1e40af); }
+        .card-border { border: 1px solid #e5e7eb; }
+        button:hover { background-color: #e5e7eb; transform: scale(1.05); transition: all 0.2s ease; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    {% include 'header.html' %}
+    <div class="container mx-auto px-4 py-6">
+        <div class="flex gap-6">
+            {% include 'sidebar.html' %}
+            <main class="flex-1">
+                {% if user.role == 'admin' %}
+                    <div class="bg-white p-6 rounded-lg shadow-lg card-border">
+                        <h2 class="text-2xl font-bold mb-4">Symptom Prediction Monitor</h2>
+                        <table class="w-full table-auto border-collapse border border-gray-300">
+                            <thead>
+                                <tr class="bg-gray-100">
+                                    <th class="border border-gray-300 px-4 py-2">Patient</th>
+                                    <th class="border border-gray-300 px-4 py-2">Symptoms</th>
+                                    <th class="border border-gray-300 px-4 py-2">Prediction</th>
+                                    <th class="border border-gray-300 px-4 py-2">Confidence</th>
+                                    <th class="border border-gray-300 px-4 py-2">Accuracy</th>
+                                    <th class="border border-gray-300 px-4 py-2">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for pred in predictions %}
+                                    <tr>
+                                        <td class="border border-gray-300 px-4 py-2">{{ pred.patient }}</td>
+                                        <td class="border border-gray-300 px-4 py-2">{{ pred.symptoms }}</td>
+                                        <td class="border border-gray-300 px-4 py-2">{{ pred.prediction }}</td>
+                                        <td class="border border-gray-300 px-4 py-2">{{ pred.confidence }}</td>
+                                        <td class="border border-gray-300 px-4 py-2">{{ pred.accuracy }}</td>
+                                        <td class="border border-gray-300 px-4 py-2">
+                                            <button class="px-3 py-1 bg-yellow-600 text-white rounded">Flag Issue</button>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-gray-600">Access denied. Admin role

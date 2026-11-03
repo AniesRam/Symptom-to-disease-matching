@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pusat Rawatan Warga - Premise Map</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .header-gradient { background: linear-gradient(to right, #2563eb, #1e40af); }
+        .card-border { border: 1px solid #e5e7eb; }
+        button:hover { background-color: #e5e7eb; transform: scale(1.05); transition: all 0.2s ease; }
+        .map-container { position: relative; height: 500px; }
+        .floor-plan { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2; pointer-events: none; }
+        .room { fill: #e5e7eb; stroke: #2563eb; stroke-width: 2; cursor: pointer; pointer-events: all; transition: fill 0.3s; }
+        .room:hover { fill: #93c5fd; }
+        .room.highlight { fill: #3b82f6; stroke: #1e40af; stroke-width: 3; }
+        .room.construction { fill: #f87171; stroke: #dc2626; } /* Red for under construction */
+        .places-list { max-height: 400px; overflow-y: auto; }
+        .place-item { cursor: pointer; padding: 8px; border-radius: 4px; }
+        .place-item:hover, .place-item.active { background-color: #dbeafe; }
+        .floor-selector { margin-bottom: 10px; }
+        .floor-selector button { margin-right: 10px; }
+        .tooltip { position: absolute; background: #333; color: #fff; padding: 5px; border-radius: 4px; display: none; z-index: 10; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    {% include 'header.html' %}
+    <div class="container mx-auto px-4 py-6">
+        <div class="flex gap-6">
+            {% include 'sidebar.html' %}
+            <main class="flex-1">
+                <div class="bg-white p-6 rounded-lg shadow-lg card-border">
+                    <h2 class="text-2xl font-bold mb-4 flex items-center gap-2">PRW Navigation</h2>
+                    
+                    <!-- Address and Contact Info -->
+                    <div class="mb-6 p-4 bg-blue-50 rounded-lg">
+                        <h3 class="text-lg font-semibold mb-2">Clinic Address & Contact</h3>
+                        <p><strong>Address:</strong> Pusat Rawatan Warga UMS, Jalan UMS, 88400 Kota Kinabalu, Sabah, Malaysia</p>
+                        <p><strong>Phone:</strong> 088-329054</p>
+                        <p><strong>Email:</strong> pejprw@ums.edu.my</p>
+                    </div>
+                    
+                    <!-- Google Map Embed -->
+                    <div class="mb-6">
+                        <h3 class="text-lg font-semibold mb-2">Location on Google Maps</h3>
+                        <iframe 
+                            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3988.123456789012!2d116.12614247122161!3d6.041648154872029!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zNsKwMDInMzAuMCJOIDExNsKwMDcnMzQuMSJF!5e0!3m2!1sen!2smy!4v1234567890123!5m2!1sen!2smy" 
+                            width="100%" 
+                            height="300" 
+                            style="border:0;" 
+                            allowfullscreen="" 
+                            loading="lazy" 
+                            referrerpolicy="no-referrer-when-downgrade">
+                        </iframe>
+                        <p class="text-sm text-gray-500 mt-2">Coordinates: 6.041648154872029, 116.12614247122161</p>
+                    </div>
+                    
+                    <div class="flex gap-6">
+                        <!-- Sidebar: Search, Places List, Floor Selector, and Admin Tools -->
+                        <aside class="w-64 bg-gray-50 rounded-lg p-4">
+                            <h3 class="text-lg font-semibold mb-4">Navigation Tools</h3>
+                            
+                            <!-- Floor Selector -->
+                            <div class="floor-selector">
+                                <button id="floor-ground" class="px-3 py-1 bg-blue-600 text-white rounded">Ground Floor</button>
+                            </div>
+                            
+                            <!-- Search Bar -->
+                            <div class="mb-4">
+                                <input type="text" id="search-input" placeholder="Search places (e.g., Pharmacy)" class="w-full border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+                            
+                            <!-- List of Places -->
+                            <div class="places-list">
+                                <div class="place-item" data-place="reception" data-floor="ground">Reception</div>
+                                <div class="place-item" data-place="waiting" data-floor="ground">Waiting Area</div>
+                                <div class="place-item" data-place="consultation1" data-floor="ground">Consultation Room 1</div>
+                                <div class="place-item" data-place="consultation2" data-floor="ground">Consultation Room 2</div>
+                                <div class="place-item" data-place="pharmacy" data-floor="ground">Pharmacy</div>
+                                <div class="place-item" data-place="admin-office" data-floor="ground">Admin Office</div>
+                                <div class="place-item" data-place="restroom" data-floor="ground">Restroom</div>
+                            </div>
+                            
+                            <!-- Admin: Flag Places -->
+                            {% if user.role == 'admin' %}
+                                <div class="mt-6">
+                                    <h4 class="text-md font-semibold mb-2">Admin: Flag Places</h4>
+                                    <form id="flag-form" class="space-y-2">
+                                        <select id="flag-place" class="w-full border rounded p-2">
+                                            <option value="">Select a place...</option>
+                                            <option value="reception">Reception</option>
+                                            <option value="waiting">Waiting Area</option>
+                                            <option value="consultation1">Consultation Room 1</option>
+                                            <option value="consultation2">Consultation Room 2</option>
+                                            <option value="pharmacy">Pharmacy</option>
+                                            <option value="admin-office">Admin Office</option>
+                                            <option value="restroom">Restroom</option>
+                                        </select>
+                                        <input type="text" id="flag-status" placeholder="Status (e.g., Under Construction)" class="w-full border rounded p-2">
+                                        <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded">Flag Place</button>
+                                    </form>
+                                </div>
+                            {% endif %}
+                        </aside>
+                        
+                        <!-- Map Section -->
+                        <div class="flex-1">
+                            <h3 class="text-lg font-semibold mb-4">Clinic Floor Plan</h3>
+                            <p class="text-gray-600 mb-4">Explore the clinic layout. Click on rooms for details. Red rooms are flagged (e.g., under construction).</p>
+                            
+                            <!-- Map Container with SVG Floor Plan -->
+                            <div class="map-container">
+                                <!-- Tooltip for Room Info -->
+                                <div id="tooltip" class="tooltip"></div>
+                                
+                                <!-- SVG Floor Plan (Ground Floor Only, Clinic-Style) -->
+                                <svg id="floor-ground-svg" class="floor-plan" viewBox="0 0 800 500">
+                                    <!-- Building Outline -->
+                                    <rect x="50" y="50" width="700" height="400" fill="none" stroke="#2563eb" stroke-width="4"/>
+                                    
+                                    <!-- Clinic Layout -->
+                                    <rect x="100" y="100" width="120" height="80" class="room" data-room="reception" title="Reception - Check-in and Assistance"/>
+                                    <text x="160" y="140" text-anchor="middle" font-size="10">Reception</text>
+                                    
+                                    <rect x="250" y="100" width="200" height="80" class="room" data-room="waiting" title="Waiting Area - Seating for Patients"/>
+                                    <text x="350" y="140" text-anchor="middle" font-size="10">Waiting Area</text>
+                                    
+                                    <rect x="500" y="100" width="120" height="80" class="room" data-room="consultation1" title="Consultation Room 1 - Doctor Visits"/>
+                                    <text x="560" y="140" text-anchor="middle" font-size="10">Consultation 1</text>
+                                    
+                                    <rect x="100" y="220" width="120" height="80" class="room" data-room="consultation2" title="Consultation Room 2 - Doctor Visits"/>
+                                    <text x="160" y="260" text-anchor="middle" font-size="10">Consultation 2</text>
+                                    
+                                    <rect x="250" y="220" width="120" height="80" class="room" data-room="pharmacy" title="Pharmacy - Prescriptions and Medicines"/>
+                                    <text x="310" y="260" text-anchor="middle" font-size="10">Pharmacy</text>
+                                    
+                                    <rect x="400" y="220" width="120" height="80" class="room" data-room="admin-office" title="Admin Office - Clinic Management"/>
+                                    <text x="460" y="260" text-anchor="middle" font-size="10">Admin Office</text>
+                                    
+                                    <rect x="550" y="220" width="120" height="80" class="room" data-room="restroom" title="Restroom - Facilities"/>
+                                    <text x="610" y="260" text-anchor="middle" font-size="10">Restroom</text>
+                                    
+                                    <!-- Hallways -->
+                                    <rect x="220" y="140" width="30" height="80" fill="#f3f4f6" stroke="#2563eb"/>
+                                    <rect x="450" y="140" width="30" height="80" fill="#f3f4f6" stroke="#2563eb"/>
+                                    <rect x="370" y="180" width="30" height="40" fill="#f3f4f6" stroke="#2563eb"/>
+                                </svg>
+                            </div>
+                            
+                            <p class="text-sm text-gray-500 mt-4">Hover for details, click to highlight. Search or select from the list.</p>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+    {% include 'scripts.html' %}
+
+    <!-- JavaScript for Search, Floors, Interaction, and Admin Flagging -->
+    <script>
+        const searchInput = document.getElementById('search-input');
+        const placeItems = document.querySelectorAll('.place-item');
+        const rooms = document.querySelectorAll('.room');
+        const tooltip = document.getElementById('tooltip');
+        const groundBtn = document.getElementById('floor-ground');
+        
+        let currentFloor = 'ground';
+        
+        // Floor Switching (Only Ground for Clinic)
+        groundBtn.addEventListener('click', () => switchFloor('ground'));
+        
+        function switchFloor(floor) {
+            currentFloor = floor;
+            // No first floor, so always show ground
+            placeItems.forEach(item => {
+                item.style.display = item.getAttribute('data-floor') === floor ? 'block' : 'none';
+            });
+        }
+        
+        // Search Functionality
+        searchInput.addEventListener('input', function() {
+            const query = this.value.toLowerCase();
+            placeItems.forEach(item => {
+                const text = item.textContent.toLowerCase();
+                item.style.display = (text.includes(query) && item.getAttribute('data-floor') === currentFloor) ? 'block' : 'none';
+            });
+        });
+        
+        // Click on Place Item to Highlight
+        placeItems.forEach(item => {
+            item.addEventListener('click', function() {
+                const place = this.getAttribute('data-place');
+                placeItems.forEach(i => i.classList.remove('active'));
+                rooms.forEach(r => r.classList.remove('highlight'));
+                this.classList.add('active');
+                const room = document.querySelector(`.room[data-room="${place}"]`);
+                if (room) room.classList.add('highlight');
+            });
+        });
+        
+        // Hover and Click on SVG Room
+        rooms.forEach(room => {
+            room.addEventListener('mouseover', function(e) {
+                const title = this.getAttribute('title');
+                tooltip.textContent = title;
+                tooltip.style.display = 'block';
+                tooltip.style.left = e.pageX + 10 + 'px';
+                tooltip.style.top = e.pageY + 10 + 'px';
+            });
+            room.addEventListener('mouseout', () => tooltip.style.display = 'none');
+            room.addEventListener('click', function() {
+                const roomId = this.getAttribute('data-room');
+                rooms.forEach(r => r.classList.remove('highlight'));
+                placeItems.forEach(i => i.classList.remove('active'));
+                this.classList.add('highlight');
+                const item = document.querySelector(`.place-item[data-place="${roomId}"]`);
+                if (item) item.classList.add('active');
+            });
+        });
+        
+        // Admin: Flag Places
+        const flagForm = document.getElementById('flag-form');
+        if (flagForm) {
+            flagForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const place = document.getElementById('flag-place').value;
+                const status = document.getElementById('flag-status').value;
+                if (place && status) {
+                    // Mock: In real app, send POST to /flag-place with place and status
+                    alert(`Flagged ${place} as: ${status}`);
+                    const room = document.querySelector(`.room[data-room="${place}"]`);
+                    if (room) room.classList.add('construction'); // Visually flag as red
+                }
+            });
+        }
+        
+        // Initialize
+        switchFloor('ground');
+    </script>
+</body>
+</html>

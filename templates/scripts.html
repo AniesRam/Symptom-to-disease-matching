@@ -1,0 +1,10 @@
+<script>
+    // Toggle notifications (if on pages with notifications)
+    const notifBtn = document.getElementById('notif-btn');
+    if (notifBtn) {
+        notifBtn.addEventListener('click', function() {
+            const notifs = document.getElementById('notifications');
+            notifs.classList.toggle('hidden');
+        });
+    }
+</script>

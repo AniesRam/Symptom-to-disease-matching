@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pusat Rawatan Warga - Knowledge Base</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .header-gradient { background: linear-gradient(to right, #2563eb, #1e40af); }
+        .card-border { border: 1px solid #e5e7eb; }
+        button:hover { background-color: #e5e7eb; transform: scale(1.05); transition: all 0.2s ease; }
+        .slideshow { position: relative; width: 100%; height: 300px; overflow: hidden; }
+        .slide { display: none; width: 100%; height: 100%; object-fit: cover; }
+        .slide.active { display: block; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    {% include 'header.html' %}
+    <div class="container mx-auto px-4 py-6">
+        <div class="flex gap-6">
+            {% include 'sidebar.html' %}
+            <main class="flex-1">
+                <div class="bg-white p-6 rounded-lg shadow-lg card-border">
+                    <h2 class="text-2xl font-bold mb-4 flex items-center gap-2">Health Education & Knowledge Base</h2>
+                    
+                    <!-- Disease-Specific Info (from Learn More link) -->
+                    {% if disease %}
+                        <div class="mb-6 border-l-4 border-green-500 pl-4 py-3 bg-green-50 rounded">
+                            <h3 class="font-semibold">About {{ disease }}</h3>
+                            <p class="text-sm text-gray-600">{{ disease_info }}</p>
+                            <p class="text-sm text-orange-600 mt-2">This information is for educational purposes. Consult a doctor for personalized advice.</p>
+                        </div>
+                    {% endif %}
+                    
+                    <!-- Search and Filter -->
+                    <div class="mb-6 flex gap-4">
+                        <input type="text" id="search-input" placeholder="Search articles..." class="flex-1 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <select id="category-filter" class="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">All Categories</option>
+                            <option value="viral">Viral Diseases</option>
+                            <option value="chronic">Chronic Conditions</option>
+                            <option value="procedures">Procedures</option>
+                        </select>
+                        <button id="search-btn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Search</button>
+                    </div>
+                    
+                    <!-- Tabs for Sections -->
+                    <div class="mb-6">
+                        <button id="articles-tab" class="px-4 py-2 bg-blue-600 text-white rounded-lg">Articles</button>
+                        <button id="tips-tab" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg ml-2">Health Tips</button>
+                        <button id="slideshow-tab" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg ml-2">Current Info Slideshow</button>
+                        {% if user.role == 'admin' %}
+                            <button id="manage-tab" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg ml-2">Manage Content</button>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Articles Section -->
+                    <div id="articles-section">
+                        <h3 class="text-lg font-semibold mb-4">Medical Articles (Published by UMS)</h3>
+                        <div id="articles-content" class="space-y-4">
+                            {% for article in articles %}
+                            <div class="border-l-4 border-blue-500 pl-4 py-3 bg-gray-50 rounded">
+                                <h4 class="font-semibold">{{ article.title }}</h4>
+                                {% if article.content_body %}
+                                <p class="text-sm text-gray-600">{{ article.content_body }}</p>
+                                {% endif %}
+                                {% if article.file_path %}
+                                    {% if article.file_path.endswith('.pdf') %}
+                                        <a href="/static/uploads/{{ article.file_path }}" target="_blank" class="text-blue-600 hover:underline mt-2 inline-block">Read Full Article (PDF)</a>
+                                    {% else %}
+                                        <img src="/static/uploads/{{ article.file_path }}" alt="{{ article.title }}" class="mt-2 w-32 h-32 object-cover rounded">
+                                    {% endif %}
+                                {% endif %}
+                                {% if user.role == 'admin' %}
+                                    <form action="{{ url_for('delete_education_content', content_id=article.content_id) }}" method="post" class="inline">
+                                        <button type="submit" class="text-red-600 hover:underline mt-2 ml-4">Delete</button>
+                                    </form>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <!-- Health Tips Section -->
+                    <div id="tips-section" class="hidden">
+                        <h3 class="text-lg font-semibold mb-4">Did You Know?</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {% for tip in tips %}
+                            <div class="bg-green-50 p-4 rounded-lg">
+                                <p class="font-semibold">{{ tip.title }}</p>
+                                {% if tip.content_body %}
+                                <p>{{ tip.content_body }}</p>
+                                {% endif %}
+                                {% if tip.file_path %}
+                                    <img src="/static/uploads/{{ tip.file_path }}" alt="{{ tip.title }}" class="mt-2 w-full h-64 object-contain rounded cursor-pointer" onclick="openModal('/static/uploads/{{ tip.file_path }}', '{{ tip.title }}')">
+                                {% endif %}
+                                {% if user.role == 'admin' %}
+                                    <form action="{{ url_for('delete_education_content', content_id=tip.content_id) }}" method="post" class="inline">
+                                        <button type="submit" class="text-red-600 hover:underline mt-2">Delete</button>
+                                    </form>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <!-- Slideshow Section -->
+                    <div id="slideshow-section" class="hidden">
+                        <h3 class="text-lg font-semibold mb-4">Current Info Slideshow</h3>
+                        <div class="slideshow" style="height: 500px;">
+                            {% for image in images %}
+                            <div class="slide{% if loop.first %} active{% endif %} relative">
+                                <img src="/static/uploads/{{ image.file_path }}" alt="{{ image.title }}" class="w-full h-full object-cover">
+                                {% if user.role == 'admin' %}
+                                    <form action="{{ url_for('delete_education_content', content_id=image.content_id) }}" method="post" class="absolute top-2 right-2">
+                                        <button type="submit" class="bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700">Delete</button>
+                                    </form>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div class="mt-2 flex justify-center gap-2">
+                            <button id="prev-slide" class="px-3 py-1 bg-gray-500 text-white rounded">Prev</button>
+                            <button id="next-slide" class="px-3 py-1 bg-gray-500 text-white rounded">Next</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Admin Management Section -->
+                    {% if user.role == 'admin' %}
+                        <div id="manage-section" class="hidden">
+                            <h3 class="text-lg font-semibold mb-4">Manage Content (Admin Only)</h3>
+                            <form action="{{ url_for('add_education_content') }}" method="post" enctype="multipart/form-data" class="space-y-4">
+                                <select name="content_type" class="w-full px-3 py-2 border rounded-lg">
+                                    <option value="article">Article (Text)</option>
+                                    <option value="image">Image (Poster)</option>
+                                    <option value="tip">Health Tip</option>
+                                </select>
+                                <input type="text" name="title" placeholder="Title (for articles/tips)" class="w-full px-3 py-2 border rounded-lg" required>
+                                <textarea name="content" placeholder="Content (text for articles/tips)" rows="4" class="w-full px-3 py-2 border rounded-lg"></textarea>
+                                <input type="file" name="file" accept="image/*,.pdf" class="w-full px-3 py-2 border rounded-lg">
+                                <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-lg">Upload Content</button>
+                            </form>
+                        </div>
+                    {% endif %}
+                </div>
+            </main>
+        </div>
+    </div>
+    {% include 'scripts.html' %}
+
+    <!-- Image Modal -->
+    <div id="image-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center hidden z-50">
+        <div class="relative max-w-4xl max-h-full p-4">
+            <img id="modal-image" src="" alt="" class="max-w-full max-h-full object-contain">
+            <button id="close-modal" class="absolute top-2 right-2 text-white text-2xl font-bold hover:text-gray-300">&times;</button>
+        </div>
+    </div>
+
+    <!-- JavaScript for Knowledge Base -->
+    <script>
+        // Tab switching
+        document.getElementById('articles-tab').addEventListener('click', () => showTab('articles-section'));
+        document.getElementById('tips-tab').addEventListener('click', () => showTab('tips-section'));
+        document.getElementById('slideshow-tab').addEventListener('click', () => showTab('slideshow-section'));
+        if (document.getElementById('manage-tab')) {
+            document.getElementById('manage-tab').addEventListener('click', () => showTab('manage-section'));
+        }
+
+        function showTab(sectionId) {
+            document.querySelectorAll('[id$="-section"]').forEach(s => s.classList.add('hidden'));
+            document.getElementById(sectionId).classList.remove('hidden');
+        }
+
+        // Check URL parameter for tab
+        const urlParams = new URLSearchParams(window.location.search);
+        const tab = urlParams.get('tab');
+        if (tab === 'tips') {
+            showTab('tips-section');
+        }
+
+        // Search functionality
+        document.getElementById('search-btn').addEventListener('click', function() {
+            const query = document.getElementById('search-input').value.toLowerCase();
+            const category = document.getElementById('category-filter').value;
+            // Mock search/filter logic (integrate with backend)
+            alert(`Searching for "${query}" in category "${category}"`);
+        });
+
+        // Slideshow functionality
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        function showSlide(index) {
+            slides.forEach((slide, i) => slide.classList.toggle('active', i === index));
+        }
+        document.getElementById('next-slide').addEventListener('click', () => {
+            currentSlide = (currentSlide + 1) % slides.length;
+            showSlide(currentSlide);
+        });
+        document.getElementById('prev-slide').addEventListener('click', () => {
+            currentSlide = (currentSlide - 1 + slides.length) % slides.length;
+            showSlide(currentSlide);
+        });
+
+        // Manage content form (mock)
+        if (document.getElementById('add-content-form')) {
+            document.getElementById('add-content-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                alert('Content uploaded successfully!'); // Mock; integrate with backend file upload
+            });
+        }
+
+        // Image modal functionality
+        function openModal(src, alt) {
+            const modal = document.getElementById('image-modal');
+            const modalImg = document.getElementById('modal-image');
+            modalImg.src = src;
+            modalImg.alt = alt;
+            modal.classList.remove('hidden');
+        }
+
+        document.getElementById('close-modal').addEventListener('click', function() {
+            document.getElementById('image-modal').classList.add('hidden');
+        });
+
+        document.getElementById('image-modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                this.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>

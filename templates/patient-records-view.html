@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pusat Rawatan Warga - Patient Records</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .header-gradient { background: linear-gradient(to right, #2563eb, #1e40af); }
+        .card-border { border: 1px solid #e5e7eb; }
+        button:hover { background-color: #e5e7eb; transform: scale(1.05); transition: all 0.2s ease; }
+        .record-item { cursor: pointer; padding: 12px; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 8px; }
+        .record-item:hover { background-color: #f9fafb; }
+        .record-details { display: none; padding: 12px; background-color: #f3f4f6; border-radius: 8px; margin-top: 8px; }
+        .tab-button { padding: 10px 20px; border: none; background: #e5e7eb; cursor: pointer; }
+        .tab-button.active { background: #2563eb; color: white; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    {% include 'header.html' %}
+    <div class="container mx-auto px-4 py-6">
+        <div class="flex gap-6">
+            {% include 'sidebar.html' %}
+            <main class="flex-1">
+                {% if user.role in ['doctor', 'nurse'] %}
+                    <div class="bg-white p-6 rounded-lg shadow-lg card-border">
+                        <h2 class="text-2xl font-bold mb-4">📄 Patient Records</h2>
+                        
+                        <!-- Searchable Patient Selector -->
+                        <div class="mb-4">
+                            <label for="patient-search" class="block text-gray-700 font-medium mb-2">Select or Search Patient</label>
+                            <input type="text" id="patient-search" list="patients-list" placeholder="Type or select patient name (e.g., John Doe)" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <datalist id="patients-list">
+                                {% for patient in patients %}
+                                    <option value="{{ patient.name }} (ID: {{ patient.user_id }})" data-id="{{ patient.user_id }}">
+                                {% endfor %}
+                            </datalist>
+                        </div>
+                        
+                        <div id="patient-details" class="hidden">
+                            <h3 class="text-lg font-semibold mb-4">Patient: <span id="selected-patient"></span></h3>
+                            
+                            <!-- Search Bar for Records -->
+                            <div class="mb-4">
+                                <input type="text" id="search-records" placeholder="Search records (e.g., Hypertension)" class="w-full border border-gray-300 rounded-md p-3 focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+                            
+                            <!-- Tabs for Record Types -->
+                            <div class="mb-4">
+                                <button class="tab-button active" onclick="showTab('history')">History</button>
+                                <button class="tab-button" onclick="showTab('prescriptions')">Prescriptions</button>
+                                <button class="tab-button" onclick="showTab('symptoms')">Symptoms</button>
+                            </div>
+                            
+                            <!-- History Tab -->
+                            <div id="history" class="tab-content active">
+                                <h4 class="text-md font-semibold mb-3">Consultation History</h4>
+                                <div class="records-list">
+                                    {% for record in patient_history %}
+                                        <div class="record-item" onclick="toggleDetails(this)">
+                                            <strong>{{ record.title }}</strong> - Date: {{ record.date }}
+                                            <div class="record-details">
+                                                <p><strong>Doctor:</strong> {{ record.doctor }}</p>
+                                                <p><strong>Notes:</strong> {{ record.notes }}</p>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                    {% if not patient_history %}
+                                        <p class="text-gray-500">No consultation history found.</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <!-- Prescriptions Tab -->
+                            <div id="prescriptions" class="tab-content">
+                                <h4 class="text-md font-semibold mb-3">Prescriptions</h4>
+                                <div class="records-list">
+                                    {% for prescription in patient_prescriptions %}
+                                        <div class="record-item" onclick="toggleDetails(this)">
+                                            <strong>{{ prescription.medication }}</strong> - Prescribed: {{ prescription.date }}
+                                            <div class="record-details">
+                                                <p><strong>Dosage:</strong> {{ prescription.dosage }}</p>
+                                                <p><strong>Reason:</strong> {{ prescription.reason }}</p>
+                                                <p><strong>Doctor:</strong> {{ prescription.doctor }}</p>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                    {% if not patient_prescriptions %}
+                                        <p class="text-gray-500">No prescriptions found.</p>
+                                    {% endif %}
+                                </div>
+                                <form id="prescription-form" action="/generate-prescription" method="POST" class="space-y-4 mt-4">
+                                    <input type="hidden" name="patient_id" id="patient-id">
+                                    <div>
+                                        <label for="medication" class="block text-gray-700 font-medium">Medication</label>
+                                        <input type="text" id="medication" name="medication" class="w-full px-3 py-2 border rounded-lg" placeholder="e.g., Metformin" required>
+                                    </div>
+                                    <div>
+                                        <label for="dosage" class="block text-gray-700 font-medium">Dosage</label>
+                                        <input type="text" id="dosage" name="dosage" class="w-full px-3 py-2 border rounded-lg" placeholder="e.g., 500mg twice daily" required>
+                                    </div>
+                                    <div>
+                                        <label for="notes" class="block text-gray-700 font-medium">Notes</label>
+                                        <textarea id="notes" name="notes" rows="3" class="w-full px-3 py-2 border rounded-lg" placeholder="Additional instructions..." required></textarea>
+                                    </div>
+                                    <button type="submit" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Generate Prescription</button>
+                                </form>
+                            </div>
+                            
+                            <!-- Symptoms Tab -->
+                            <div id="symptoms" class="tab-content">
+                                <h4 class="text-md font-semibold mb-3">Recurring Symptoms</h4>
+                                <div class="records-list">
+                                    {% for symptom in patient_symptoms %}
+                                        <div class="record-item" onclick="toggleDetails(this)">
+                                            <strong>{{ symptom.symptoms }}</strong> - Recorded: {{ symptom.date }}
+                                            <div class="record-details">
+                                                <p><strong>Findings:</strong> {{ symptom.findings }}</p>
+                                                <p><strong>Doctor:</strong> {{ symptom.doctor }}</p>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                    {% if not patient_symptoms %}
+                                        <p class="text-gray-500">No symptoms records found.</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% else %}
+                    <p class="text-gray-600">Access denied. Doctor/Nurse role required.</p>
+                {% endif %}
+            </main>
+        </div>
+    </div>
+    {% include 'scripts.html' %}
+
+    <!-- JavaScript for Patient Records -->
+    <script>
+        function showTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.querySelectorAll('.tab-button').forEach(button => button.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        function toggleDetails(item) {
+            const details = item.querySelector('.record-details');
+            details.style.display = details.style.display === 'block' ? 'none' : 'block';
+        }
+
+        // Search functionality for records
+        document.getElementById('search-records')?.addEventListener('input', function() {
+            const query = this.value.toLowerCase();
+            document.querySelectorAll('.record-item').forEach(item => {
+                item.style.display = item.textContent.toLowerCase().includes(query) ? 'block' : 'none';
+            });
+        });
+
+        // Patient search and selection
+        const patientSearch = document.getElementById('patient-search');
+        const patientsList = document.getElementById('patients-list');
+        
+        patientSearch.addEventListener('input', function() {
+            const query = this.value.toLowerCase();
+            const options = patientsList.querySelectorAll('option');
+            options.forEach(option => {
+                option.style.display = option.value.toLowerCase().includes(query) ? 'block' : 'none';
+            });
+        });
+
+        patientSearch.addEventListener('change', function() {
+            const selectedValue = this.value;
+            const options = patientsList.querySelectorAll('option');
+            let selectedId = null;
+            options.forEach(option => {
+                if (option.value === selectedValue) {
+                    selectedId = option.getAttribute('data-id');
+                }
+            });
+            if (selectedId) {
+                document.getElementById('selected-patient').textContent = selectedValue;
+                document.getElementById('patient-id').value = selectedId;
+                document.getElementById('patient-details').classList.remove('hidden');
+                // In real app, load patient data via AJAX (e.g., fetch('/load-patient-records?patient_id=' + selectedId))
+            } else {
+                document.getElementById('patient-details').classList.add('hidden');
+            }
+        });
+
+        // Prescription form submission
+        document.getElementById('prescription-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            alert('Prescription generated and added to patient records!');
+            // In real app, submit to backend
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,61 @@
+<div id="notifications" class="fixed right-4 top-20 w-96 bg-white rounded-lg shadow-xl border z-50 max-h-96 overflow-y-auto hidden">
+    <div class="p-4 border-b">
+        <h3 class="font-bold">Notifications</h3>
+        <button id="close-notifications" class="float-right text-gray-500 hover:text-gray-700">✕</button>
+    </div>
+    {% if user.role == 'admin' %}
+        {% if unread_feedback %}
+            <div class="p-4 border-b hover:bg-gray-50">
+                <p class="font-semibold text-sm">Unread Feedback</p>
+                <p class="text-sm text-gray-600 mt-1">You have {{ unread_feedback }} unread feedback items.</p>
+                <a href="/feedback" class="mt-2 text-xs text-blue-600 hover:underline">View Feedback</a>
+            </div>
+        {% endif %}
+        {% if active_alerts %}
+            <div class="p-4 border-b hover:bg-gray-50">
+                <p class="font-semibold text-sm">Active Emergency Alerts</p>
+                <p class="text-sm text-gray-600 mt-1">There are {{ active_alerts }} active emergency alerts.</p>
+                <a href="/emergency" class="mt-2 text-xs text-blue-600 hover:underline">View Alerts</a>
+            </div>
+        {% endif %}
+    {% elif user.role in ['doctor', 'nurse'] %}
+        {% if active_alerts %}
+            <div class="p-4 border-b hover:bg-gray-50">
+                <p class="font-semibold text-sm">Active Emergency Alerts</p>
+                <p class="text-sm text-gray-600 mt-1">There are {{ active_alerts }} active emergency alerts.</p>
+                <a href="/emergency" class="mt-2 text-xs text-blue-600 hover:underline">View Alerts</a>
+            </div>
+        {% endif %}
+    {% endif %}
+    {% if not (unread_feedback or active_alerts) %}
+        <div class="p-4 text-center text-gray-500">
+            <p>No new notifications.</p>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+    // Close notifications when clicking the close button
+    const closeBtn = document.getElementById('close-notifications');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', function() {
+            document.getElementById('notifications').classList.add('hidden');
+        });
+    }
+
+    // Mark notifications as read
+    document.querySelectorAll('.mark-read-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const notificationId = this.getAttribute('data-id');
+            // Send POST request to mark as read (e.g., /mark-notification-read/<id>)
+            fetch(`/mark-notification-read/${notificationId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            }).then(response => {
+                if (response.ok) {
+                    this.parentElement.remove(); // Remove from UI
+                }
+            });
+        });
+    });
+</script>

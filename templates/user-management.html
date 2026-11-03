@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pusat Rawatan Warga - User Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .header-gradient { background: linear-gradient(to right, #2563eb, #1e40af); }
+        .card-border { border: 1px solid #e5e7eb; }
+        button:hover { background-color: #e5e7eb; transform: scale(1.05); transition: all 0.2s ease; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    {% include 'header.html' %}
+    <div class="container mx-auto px-4 py-6">
+        <div class="flex gap-6">
+            {% include 'sidebar.html' %}
+            <main class="flex-1">
+                {% if user.role == 'admin' %}
+                    <div class="bg-white p-6 rounded-lg shadow-lg card-border">
+                        <h2 class="text-2xl font-bold mb-4">User & Access Management</h2>
+
+                        <!-- Add New User Form -->
+                        <div class="mb-6 p-4 bg-gray-50 rounded-lg">
+                            <h3 class="text-lg font-semibold mb-3">Add New User</h3>
+                            <form id="add-user-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Name</label>
+                                    <input type="text" name="name" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Email</label>
+                                    <input type="email" name="email" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Password</label>
+                                    <input type="password" name="password" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Role</label>
+                                    <select name="role" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                        <option value="admin">Admin</option>
+                                        <option value="doctor">Doctor</option>
+                                        <option value="nurse">Nurse</option>
+                                        <option value="patient">Patient</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Contact</label>
+                                    <input type="text" name="contact" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                                <div class="md:col-span-2">
+                                    <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">Add User</button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <table class="w-full table-auto border-collapse border border-gray-300">
+                            <thead>
+                                <tr class="bg-gray-100">
+                                    <th class="border border-gray-300 px-4 py-2">Name</th>
+                                    <th class="border border-gray-300 px-4 py-2">Email</th>
+                                    <th class="border border-gray-300 px-4 py-2">Role</th>
+                                    <th class="border border-gray-300 px-4 py-2">Status</th>
+                                    <th class="border border-gray-300 px-4 py-2">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for u in users %}
+                                    <tr>
+                                        <td class="border border-gray-300 px-4 py-2">{{ u.name }}</td>
+                                        <td class="border border-gray-300 px-4 py-2">{{ u.email }}</td>
+                                        <td class="border border-gray-300 px-4 py-2">{{ u.role }}</td>
+                                        <td class="border border-gray-300 px-4 py-2">{{ u.status or 'Active' }}</td>
+                                        <td class="border border-gray-300 px-4 py-2">
+                                            <button class="px-3 py-1 bg-blue-600 text-white rounded edit-role-btn" data-id="{{ u.user_id }}">Edit Role</button>
+                                            <button class="px-3 py-1 bg-yellow-600 text-white rounded ml-2 suspend-btn" data-id="{{ u.user_id }}">Suspend</button>
+                                            <button class="px-3 py-1 bg-red-600 text-white rounded ml-2 remove-btn" data-id="{{ u.user_id }}">Remove</button>
+                                            {% if u.role == 'patient' %}
+                                                <button class="px-3 py-1 bg-green-600 text-white rounded ml-2 view-records-btn" data-id="{{ u.user_id }}">View Records</button>
+                                            {% elif u.role in ['doctor', 'nurse'] %}
+                                                <button class="px-3 py-1 bg-purple-600 text-white rounded ml-2 view-schedule-btn" data-id="{{ u.user_id }}">View Schedule</button>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-gray-600">Access denied. Admin role required.</p>
+                {% endif %}
+            </main>
+        </div>
+    </div>
+    {% include 'scripts.html' %}
+
+    <!-- JavaScript for User Management -->
+    <script>
+        // Edit Role
+        document.querySelectorAll('.edit-role-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const userId = this.getAttribute('data-id');
+                const newRole = prompt('Enter new role (patient, doctor, nurse, admin):');
+                if (newRole) {
+                    fetch('/edit-user-role', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ user_id: userId, role: newRole })
+                    }).then(response => {
+                        if (response.ok) {
+                            alert('Role updated successfully.');
+                            location.reload();
+                        } else {
+                            alert('Failed to update role.');
+                        }
+                    });
+                }
+            });
+        });
+
+        // Suspend User
+        document.querySelectorAll('.suspend-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const userId = this.getAttribute('data-id');
+                if (confirm('Suspend this user?')) {
+                    fetch('/suspend-user', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ user_id: userId })
+                    }).then(response => {
+                        if (response.ok) {
+                            alert('User suspended.');
+                            location.reload();
+                        } else {
+                            alert('Failed to suspend user.');
+                        }
+                    });
+                }
+            });
+        });
+
+        // Remove User
+        document.querySelectorAll('.remove-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const userId = this.getAttribute('data-id');
+                if (confirm('Remove this user permanently?')) {
+                    fetch('/remove-user', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ user_id: userId })
+                    }).then(response => {
+                        if (response.ok) {
+                            alert('User removed.');
+                            location.reload();
+                        } else {
+                            alert('Failed to remove user.');
+                        }
+                    });
+                }
+            });
+        });
+
+        // View Records (for patients)
+        document.querySelectorAll('.view-records-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const userId = this.getAttribute('data-id');
+                window.location.href = `/patient-records?patient_id=${userId}`;
+            });
+        });
+
+        // View Schedule (for doctors/nurses)
+        document.querySelectorAll('.view-schedule-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const userId = this.getAttribute('data-id');
+                window.location.href = `/schedule?doctor_id=${userId}`;
+            });
+        });
+
+        // Add New User
+        document.getElementById('add-user-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            const data = {
+                name: formData.get('name'),
+                email: formData.get('email'),
+                password: formData.get('password'),
+                role: formData.get('role'),
+                contact: formData.get('contact')
+            };
+            fetch('/add-user', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            }).then(response => response.json()).then(result => {
+                if (result.success) {
+                    alert('User added successfully.');
+                    location.reload();
+                } else {
+                    alert('Error: ' + result.error);
+                }
+            }).catch(error => {
+                alert('An error occurred while adding the user.');
+            });
+        });
+    </script>
+</body>
+</html>

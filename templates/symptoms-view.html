@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pusat Rawatan Warga - AI Symptom Checker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .header-gradient { background: linear-gradient(to right, #2563eb, #1e40af); }
+        .card-border { border: 1px solid #e5e7eb; }
+        button:hover { background-color: #e5e7eb; transform: scale(1.05); transition: all 0.2s ease; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    {% include 'header.html' %}
+    <div class="container mx-auto px-4 py-6">
+        <div class="flex gap-6">
+            {% include 'sidebar.html' %}
+            <main class="flex-1">
+                {% if user.role == 'patient' %}
+                    <div class="bg-white p-6 rounded-lg shadow-md card-border">
+                        <h2 class="text-2xl font-bold mb-4 flex items-center gap-2">Symptom Checker</h2>
+                        <p class="text-gray-600 mb-6">Select your symptoms from the list below and/or describe others. Our system will provide possible insights. <strong>This is not medical advice—consult a doctor for diagnosis.</strong></p>
+
+                        <!-- Symptom Input Form -->
+                        <form action="/symptoms" method="POST" class="space-y-4">
+                            <!-- Search Bar for Symptoms -->
+                            <div>
+                                <label for="symptom-search" class="block text-sm font-medium text-gray-700 mb-2">Search Symptoms</label>
+                                <input type="text" id="symptom-search" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="Type to search symptoms (e.g., 'fever')">
+                            </div>
+                            
+                            <!-- Checkboxes for Common Symptoms -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Select Your Symptoms</label>
+                                <div id="symptoms-grid" class="grid grid-cols-2 md:grid-cols-3 gap-3 max-h-96 overflow-y-auto">
+                                    <label class="flex items-center symptom-item">
+                                        <input type="checkbox" name="symptoms" value="fever" class="mr-2"> Fever
+                                    </label>
+                                    <label class="flex items-center symptom-item">
+                                        <input type="checkbox" name="symptoms" value="cough" class="mr-2"> Cough
+                                    </label>
+                                    <label class="flex items-center symptom-item">
+                                        <input type="checkbox" name="symptoms" value="fatigue" class="mr-2"> Fatigue
+                                    </label>
+                                    <label class="flex items-center symptom-item">
+                                        <input type="checkbox" name="symptoms" value="shortness_of_breath" class="mr-2"> Shortness Of Breath
+                                    </label>
+                                    <label class="flex items-center symptom-item">
+                                        <input type="checkbox" name="symptoms" value="chest_pain" class="mr-2"> Chest Pain
+                                    </label>
+                                    <label class="flex items-center symptom-item">
+                                        <input type="checkbox" name="symptoms" value="sore_throat" class="mr-2"> Sore Throat
+                                    </label>
+                                    <label class="flex items-center symptom-item">
+                                        <input type="checkbox" name="symptoms" value="runny_nose" class="mr-2"> Runny Nose
+                                    </label>
+                                    <label class="flex items-center symptom-item">
+                                        <input type="checkbox" name="symptoms" value="sneezing" class="mr-2"> Sneezing
+                                    </label>
+                                    <label class="flex items-center symptom-item">
+                                        <input type="checkbox" name="symptoms" value="wheezing" class="mr-2"> Wheezing
+                                    </label>
+                                    <label class="flex items-center symptom-item">
+                                        <input type="checkbox" name="symptoms" value="phlegm" class="mr-2"> Phlegm
+                                    </label>
+                                    <label class="flex items-center symptom-item">
+                                        <input type="checkbox" name="symptoms" value="difficulty_breathing" class="mr-2"> Difficulty Breathing
+                                    </label>
+                                    <label class="flex items-center symptom-item">
+                                        <input type="checkbox" name="symptoms" value="weight_loss" class="mr-2"> Weight Loss
+                                    </label>
+                                    <label class="flex items-center symptom-item">
+                                        <input type="checkbox" name="symptoms" value="night_sweats" class="mr-2"> Night Sweats
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <!-- Text Area for Other Symptoms -->
+                            <div>
+                                <label for="other-symptoms" class="block text-sm font-medium text-gray-700">Other Symptoms (Optional)</label>
+                                <textarea id="other-symptoms" name="other-symptoms" rows="2" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 p-3" placeholder="Describe any additional symptoms..."></textarea>
+                            </div>
+                            
+                            <!-- Buttons -->
+                            <div class="flex gap-4">
+                                <button type="submit" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Check Symptoms</button>
+                                <button type="button" id="clear-btn" class="px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600">Clear</button>
+                            </div>
+                        </form>
+
+                        <!-- Results Section -->
+                        {% if prediction %}
+                            <div id="results" class="mt-6">
+                                <h3 class="text-lg font-semibold mb-4">AI Analysis Results</h3>
+                                <div class="space-y-3">
+                                    <div class="border-l-4 border-blue-500 pl-4 py-3 bg-gray-50 rounded">
+                                        <p class="font-semibold">{{ prediction }}</p>
+                                        <p class="text-sm text-gray-600">Confidence: {{ "%.2f"|format(confidence * 100) }}%</p>
+                                        <p class="text-sm text-orange-600">Seek professional medical help for accurate diagnosis.</p>
+                                    </div>
+                                </div>
+                                <p class="text-sm text-red-600 mt-4"><strong>Disclaimer:</strong> This is a demo tool. Results are simulated based on common patterns and are not accurate. Seek professional medical help immediately for serious symptoms.</p>
+                                
+                                <!-- Learn More Link -->
+                                <div class="mt-4">
+                                    <a href="/knowledge-base?tab=tips" class="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 inline-block">Learn More About {{ prediction }}</a>
+                                </div>
+                                
+                                <!-- Recent Predictions -->
+                                {% if recent_predictions %}
+                                    <div class="mt-4">
+                                        <h4 class="font-semibold">Recent Predictions</h4>
+                                        <ul class="list-disc pl-5">
+                                            {% for pred in recent_predictions %}
+                                                <li>{{ pred.predicted_disease }} ({{ "%.2f"|format(pred.confidence_score * 100) }}%)</li>
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                {% endif %}
+                                
+                                <!-- Book Appointment Button -->
+                                <div class="mt-4">
+                                    <button id="book-appointment-btn" class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700">Book Appointment</button>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                {% elif user.role in ['doctor', 'nurse'] %}
+                    <div class="bg-white p-6 rounded-lg shadow-md card-border">
+                        <h3 class="text-lg font-semibold mb-4">Review Patient Symptoms & AI Predictions</h3>
+                        <div class="mb-4">
+                            <label for="patient-select" class="block text-gray-700 font-medium mb-2">Select Patient</label>
+                            <select id="patient-select" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">Choose a patient...</option>
+                                <!-- Populate with patient data from Flask (add logic in route if needed) -->
+                            </select>
+                        </div>
+                        <div id="patient-symptoms" class="hidden">
+                            <p class="mb-2"><strong>Symptoms:</strong> <span id="symptoms-text"></span></p>
+                            <p class="mb-4"><strong>AI Prediction:</strong> <span id="ai-prediction"></span></p>
+                            <form id="feedback-form">
+                                <label for="feedback" class="block text-gray-700 font-medium mb-2">Feedback on Prediction</label>
+                                <textarea id="feedback" name="feedback" rows="3" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Accurate? Suggestions..."></textarea>
+                                <button type="submit" class="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Submit Feedback</button>
+                            </form>
+                        </div>
+                    </div>
+                {% endif %}
+            </main>
+        </div>
+    </div>
+    {% include 'scripts.html' %}
+
+    <!-- JavaScript for Clearing, Booking, and Symptom Search -->
+    <script>
+        // Symptom Search Functionality
+        const searchInput = document.getElementById('symptom-search');
+        const symptomItems = document.querySelectorAll('.symptom-item');
+
+        if (searchInput) {
+            searchInput.addEventListener('input', function() {
+                const query = this.value.toLowerCase();
+                symptomItems.forEach(item => {
+                    const text = item.textContent.toLowerCase();
+                    item.style.display = text.includes(query) ? 'flex' : 'none';
+                });
+            });
+        }
+
+        // Clear button (clears checkboxes, text area, and search)
+        if (document.getElementById('clear-btn')) {
+            document.getElementById('clear-btn').addEventListener('click', function() {
+                document.querySelectorAll('input[name="symptoms"]').forEach(cb => cb.checked = false);
+                document.getElementById('other-symptoms').value = '';
+                if (searchInput) searchInput.value = '';  // Clear search too
+                symptomItems.forEach(item => item.style.display = 'flex');  // Show all items
+            });
+        }
+        
+        // Book Appointment Button
+        if (document.getElementById('book-appointment-btn')) {
+            document.getElementById('book-appointment-btn').addEventListener('click', function() {
+                const checkedSymptoms = Array.from(document.querySelectorAll('input[name="symptoms"]:checked')).map(cb => cb.value);
+                const otherSymptoms = document.getElementById('other-symptoms').value;
+                const symptomsQuery = [...checkedSymptoms, otherSymptoms].filter(s => s).join(', ');
+                window.location.href = `/book-appointment?symptoms=${encodeURIComponent(symptomsQuery)}`;
+            });
+        }
+
+        // Doctor feedback logic (mock for now; integrate with backend if needed)
+        if (document.getElementById('patient-select')) {
+            document.getElementById('patient-select').addEventListener('change', function() {
+                const selectedPatient = this.value;
+                if (selectedPatient) {
+                    document.getElementById('symptoms-text').textContent = 'Fever, cough'; // Mock
+                    document.getElementById('ai-prediction').textContent = 'Common Cold (85%)'; // Mock
+                    document.getElementById('patient-symptoms').classList.remove('hidden');
+                }
+            });
+            document.getElementById('feedback-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                alert('Feedback submitted!'); // Mock
+            });
+        }
+    </script>
+</body>
+</html>

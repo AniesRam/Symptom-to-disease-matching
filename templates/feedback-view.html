@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pusat Rawatan Warga - Feedback</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .header-gradient { background: linear-gradient(to right, #2563eb, #1e40af); }
+        .card-border { border: 1px solid #e5e7eb; }
+        button:hover { background-color: #e5e7eb; transform: scale(1.05); transition: all 0.2s ease; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    {% include 'header.html' %}
+    <div class="container mx-auto px-4 py-6">
+        <div class="flex gap-6">
+            {% include 'sidebar.html' %}
+            <main class="flex-1">
+                {% if user.role == 'patient' %}
+                    <!-- Patient View -->
+                    <div class="bg-white p-6 rounded-lg shadow-lg card-border">
+                        <h2 class="text-2xl font-bold mb-4 flex items-center gap-2">💬 Provide Feedback</h2>
+                        <p class="text-gray-600 mb-6">Help us improve! Share your thoughts on our services, website, appointments, or anything else.</p>
+                        <form id="feedback-form" action="/submit-feedback" method="POST" class="space-y-4">
+                            <div>
+                                <label for="category" class="block text-gray-700 font-medium">Category</label>
+                                <select id="category" name="category" required class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <option value="hospital">Clinic Experience</option>
+                                    <option value="website">Website Experience</option>
+                                    <option value="appointment">Appointment Experience</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="rating" class="block text-gray-700 font-medium">Rating (1-5)</label>
+                                <select id="rating" name="rating" required class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <option value="5">5 - Excellent</option>
+                                    <option value="4">4 - Good</option>
+                                    <option value="3">3 - Average</option>
+                                    <option value="2">2 - Poor</option>
+                                    <option value="1">1 - Very Poor</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="comments" class="block text-gray-700 font-medium">Comments</label>
+                                <textarea id="comments" name="comments" rows="4" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Tell us more..."></textarea>
+                            </div>
+                            <button type="submit" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Submit Feedback</button>
+                        </form>
+                    </div>
+                {% elif user.role in ['doctor', 'nurse'] %}
+                    <!-- Doctor View -->
+                    <div class="bg-white p-6 rounded-lg shadow-lg card-border">
+                        <h2 class="text-2xl font-bold mb-4 flex items-center gap-2">💬 Feedback Review & AI Learning</h2>
+                        <p class="text-gray-600 mb-6">Review patient feedback and provide AI prediction feedback for system improvement.</p>
+                        
+                        <!-- Patient Feedback Section (Real Data) -->
+                        <h3 class="text-lg font-semibold mb-4">Patient Feedback</h3>
+                        <div class="space-y-4 mb-6">
+                            {% for feedback in patient_feedbacks %}
+                                <div class="border-l-4 border-blue-500 pl-4 py-3 bg-gray-50 rounded">
+                                    <p><strong>Patient:</strong> {{ feedback.user_name }} | <strong>Category:</strong> {{ feedback.category }} | <strong>Rating:</strong> {{ feedback.rating }}</p>
+                                    <p><strong>Comments:</strong> {{ feedback.comments }}</p>
+                                    <button class="mt-2 px-3 py-1 bg-green-600 text-white rounded mark-reviewed-btn" data-id="{{ feedback.feedback_id }}">Mark Reviewed</button>
+                                </div>
+                            {% endfor %}
+                            {% if not patient_feedbacks %}
+                                <p class="text-gray-500">No patient feedback to review.</p>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- AI Feedback Section -->
+                        <h3 class="text-lg font-semibold mb-4">AI Prediction Feedback</h3>
+                        <div class="mb-4">
+                            <label for="ai-patient-select" class="block text-gray-700 font-medium mb-2">Select Patient Prediction</label>
+                            <select id="ai-patient-select" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">Choose a prediction...</option>
+                                {% for prediction in ai_predictions %}
+                                    <option value="{{ prediction.prediction_id }}">{{ prediction.patient_name }} - {{ prediction.predicted_disease }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div id="ai-feedback" class="hidden">
+                            <p class="mb-2"><strong>Prediction:</strong> <span id="selected-prediction"></span></p>
+                            <form id="ai-feedback-form">
+                                <label for="ai-comments" class="block text-gray-700 font-medium mb-2">Feedback on Accuracy</label>
+                                <textarea id="ai-comments" name="ai-comments" rows="3" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Accurate? Suggestions for improvement..."></textarea>
+                                <button type="submit" class="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Submit AI Feedback</button>
+                            </form>
+                        </div>
+                    </div>
+                {% elif user.role == 'admin' %}
+                    <!-- Admin View -->
+                    <div class="bg-white p-6 rounded-lg shadow-lg card-border">
+                        <h2 class="text-2xl font-bold mb-4 flex items-center gap-2">💬 Feedback Oversight & Improvement</h2>
+                        <p class="text-gray-600 mb-6">Review and categorize feedback from patients and doctors. Forward issues to IT or PRW teams.</p>
+                        
+                        <!-- Notifications Section (New Feedback Alerts) -->
+                        <div class="mb-6 bg-yellow-50 p-4 rounded-lg border-l-4 border-yellow-500">
+                            <h3 class="text-lg font-semibold mb-2">🔔 New Feedback Notifications</h3>
+                            <div id="notifications-list" class="space-y-2">
+                                {% for notification in notifications %}
+                                    <div class="flex justify-between items-center">
+                                        <p><strong>New Feedback:</strong> From {{ notification.name }} ({{ notification.role }}) - Category: {{ notification.category }}, Rating: {{ notification.rating }}</p>
+                                        <button class="px-3 py-1 bg-blue-600 text-white rounded mark-read-btn" data-id="{{ notification.feedback_id }}">Mark as Read</button>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            {% if not notifications %}
+                                <p class="text-gray-500">No new notifications.</p>
+                            {% endif %}
+                        </div>
+
+                        <!-- Feedback List -->
+                        <div class="space-y-4 mb-6">
+                            {% for feedback in all_feedback %}
+                                <div class="border-l-4 border-blue-500 pl-4 py-3 bg-gray-50 rounded">
+                                    <p><strong>User:</strong> {{ feedback.name }} ({{ feedback.role }}) | <strong>Category:</strong> {{ feedback.category }} | <strong>Rating:</strong> {{ feedback.rating }}</p>
+                                    <p><strong>Comments:</strong> {{ feedback.comments }}</p>
+                                    <div class="mt-2 flex gap-2">
+                                        {% if feedback.resolved %}
+                                            <button class="px-3 py-1 bg-gray-600 text-white rounded" disabled>Resolved</button>
+                                        {% else %}
+                                            <button class="px-3 py-1 bg-green-600 text-white rounded resolve-btn" data-id="{{ feedback.feedback_id }}">Resolve</button>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                            {% if not all_feedback %}
+                                <p class="text-gray-500">No feedback available.</p>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Improvement Actions -->
+                        <div class="mt-6">
+                            <button class="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700">Analyze Patterns</button>
+                            <button class="ml-4 px-6 py-3 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700">Generate Report</button>
+                        </div>
+                    </div>
+                {% endif %}
+            </main>
+        </div>
+    </div>
+    {% include 'scripts.html' %}
+
+    <!-- JavaScript for Feedback -->
+    <script>
+        // Patient feedback form (now submits to backend)
+        if (document.getElementById('feedback-form')) {
+            document.getElementById('feedback-form').addEventListener('submit', function(e) {
+                // Let the form submit naturally to /submit-feedback
+                alert('Feedback submitted! Thank you.');  // Optional client-side confirmation
+            });
+        }
+
+        // Doctor: Mark feedback as reviewed
+        document.querySelectorAll('.mark-reviewed-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const id = this.getAttribute('data-id');
+                // In real app, send POST to /mark-feedback-reviewed/<id>
+                this.parentElement.remove();  // Remove from UI
+                alert('Feedback marked as reviewed.');
+            });
+        });
+
+        // Doctor AI feedback logic
+        if (document.getElementById('ai-patient-select')) {
+            document.getElementById('ai-patient-select').addEventListener('change', function() {
+                const selectedOption = this.options[this.selectedIndex];
+                if (this.value) {
+                    document.getElementById('selected-prediction').textContent = selectedOption.text;
+                    document.getElementById('ai-feedback').classList.remove('hidden');
+                }
+            });
+            document.getElementById('ai-feedback-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                alert('AI feedback submitted for learning!');
+            });
+        }
+
+        // Admin actions (mock)
+        document.querySelectorAll('.px-3').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const action = this.textContent;
+                if (action === 'Categorize as IT Issue') alert('Categorized as IT issue.');
+                else if (action === 'Forward to Team') alert('Forwarded to team.');
+            });
+        });
+
+        // Mark notifications as read (admin)
+        document.querySelectorAll('.mark-read-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const id = this.getAttribute('data-id');
+                fetch(`/mark-feedback-read/${id}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        this.parentElement.remove();  // Remove from UI
+                        alert('Marked as read.');
+                    } else {
+                        alert('Error marking as read.');
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+            });
+        });
+
+        // Resolve feedback (admin)
+        document.querySelectorAll('.resolve-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const id = this.getAttribute('data-id');
+                fetch(`/resolve-feedback/${id}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        this.textContent = 'Resolved';
+                        this.classList.remove('bg-green-600');
+                        this.classList.add('bg-gray-600');
+                        this.disabled = true;
+                        alert('Feedback resolved and user notified.');
+                    } else {
+                        alert('Error resolving feedback.');
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+            });
+        });
+    </script>
+</body>
+</html>
