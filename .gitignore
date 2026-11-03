@@ -12,3 +12,4 @@ test_queue.py
 
 # Exclude compiled python files
 *.pyc
+datasets/*.csv
