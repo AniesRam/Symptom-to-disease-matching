@@ -50,4 +50,9 @@ The system prototype underwent structured usability evaluation:
 ├── disease_model.pkl    # Serialized Random Forest model weights
 └── symptom_columns.pkl  # Encoded feature mapping schema
 
-add note: i also use PostgreSQL for this. because the database auto update so its easy for me :)
+## Additional information
+* i use PostgreSQL for this. because the database auto update so its easy for me :)
+* run "py app.py" on terminal to open the web
+* Patient: patient@example.com / pass123 / Role: Patient
+* Doctor: doctor@example.com / pass123 / Role: Doctor
+* Admin: admin@example.com / pass123 / Role: Admin
